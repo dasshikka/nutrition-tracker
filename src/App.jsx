@@ -537,10 +537,9 @@ function AddFoodPanel({
   manualSave, setManualSave, onAddManual,
   S, c,
 }) {
-  // Chip style — compact action tool feel
   const chip = (active) => ({
     display: "inline-flex", alignItems: "center", gap: 4,
-    padding: "5px 10px", borderRadius: 99, border: "none", cursor: "pointer",
+    padding: "5px 11px", borderRadius: 99, border: "none", cursor: "pointer",
     fontSize: 12, fontWeight: active ? 600 : 400,
     background: active ? "#e8ecff" : c.bgMuted,
     color: active ? c.accent : c.textMuted,
@@ -548,151 +547,155 @@ function AddFoodPanel({
     transition: "background 0.12s, color 0.12s",
   });
 
+  const isExpanded = foodMethod === "snap" || foodMethod === "manual" || foodMethod === "saved";
+
   return (
-    <div>
-      {/* ── Default: Describe input always visible ── */}
-      {(foodMethod === "write" || foodMethod === "snap" || foodMethod === "manual" || foodMethod === "saved") && (
-        <div style={S.card}>
+    <div style={S.card}>
+      {/* Back link */}
+      {isExpanded && (
+        <button onClick={() => setFoodMethod("write")}
+          style={{ background: "none", border: "none", cursor: "pointer", color: c.textLight, fontSize: 12, fontFamily: "'DM Sans',sans-serif", padding: "0 0 10px", display: "block" }}>
+          ← Back to estimate
+        </button>
+      )}
 
-          {/* Describe input — always shown */}
-          {foodMethod !== "manual" && foodMethod !== "saved" && foodMethod !== "snap" && (
-            <>
-              <input style={S.input} placeholder="Describe your meal…" value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && onEstimate()} />
-              <button style={{ ...S.btn("primary", loading || !query.trim()), width: "100%", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-                onClick={onEstimate} disabled={loading || !query.trim()}>
-                {loading ? <><Spinner /> Estimating...</> : "Estimate meal"}
-              </button>
-              {error && <div style={{ color: c.tomato, fontSize: 12, marginTop: 8 }}>{error}</div>}
-              {preview && <PreviewResult preview={preview} grams={grams} onGramsChange={onGramsChange} onAdd={onAddPreview} S={S} c={c} />}
-            </>
+      {/* Describe — default */}
+      {foodMethod === "write" && (
+        <>
+          <input style={S.input} placeholder="Describe your meal…" value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && onEstimate()} />
+          <button style={{ ...S.btn("primary", loading || !query.trim()), width: "100%", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            onClick={onEstimate} disabled={loading || !query.trim()}>
+            {loading ? <><Spinner /> Estimating...</> : "Estimate meal"}
+          </button>
+          {error && <div style={{ color: c.tomato, fontSize: 12, marginTop: 8 }}>{error}</div>}
+          {preview && <PreviewResult preview={preview} grams={grams} onGramsChange={onGramsChange} onAdd={onAddPreview} S={S} c={c} />}
+        </>
+      )}
+
+      {/* Snap */}
+      {foodMethod === "snap" && (
+        <>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onPhotoUpload} />
+          {!photoData ? (
+            <div onClick={() => fileRef.current?.click()} style={{ border: `1px dashed ${c.border}`, borderRadius: 10, padding: "24px 20px", textAlign: "center", cursor: "pointer", background: c.bgMuted }}>
+              <div style={{ fontSize: 24, marginBottom: 6 }}>📸</div>
+              <div style={{ fontSize: 13, color: c.textMuted }}>Tap to take or upload a photo</div>
+            </div>
+          ) : (
+            <div>
+              <img src={photoData.url} alt="meal" style={{ width: "100%", borderRadius: 10, maxHeight: 190, objectFit: "cover" }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <button style={{ ...S.btn("secondary"), flex: 1 }} onClick={() => setPhotoData(null)}>Remove</button>
+                <button style={{ ...S.btn("primary", loading), flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={onAnalyzePhoto} disabled={loading}>
+                  {loading ? <><Spinner /> Estimating...</> : "Estimate meal"}
+                </button>
+              </div>
+            </div>
           )}
+          {error && <div style={{ color: c.tomato, fontSize: 12, marginTop: 8 }}>{error}</div>}
+          {preview && <PreviewResult preview={preview} grams={grams} onGramsChange={onGramsChange} onAdd={onAddPreview} S={S} c={c} />}
+        </>
+      )}
 
-          {/* Snap panel */}
-          {foodMethod === "snap" && (
-            <>
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onPhotoUpload} />
-              {!photoData ? (
-                <div onClick={() => fileRef.current?.click()} style={{ border: `1px dashed ${c.border}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", background: c.bgMuted }}>
-                  <div style={{ fontSize: 26, marginBottom: 6 }}>📸</div>
-                  <div style={{ fontSize: 13, color: c.textMuted }}>Tap to take or upload a photo</div>
-                </div>
-              ) : (
-                <div>
-                  <img src={photoData.url} alt="meal" style={{ width: "100%", borderRadius: 10, maxHeight: 190, objectFit: "cover" }} />
-                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <button style={{ ...S.btn("secondary"), flex: 1 }} onClick={() => setPhotoData(null)}>Remove</button>
-                    <button style={{ ...S.btn("primary", loading), flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={onAnalyzePhoto} disabled={loading}>
-                      {loading ? <><Spinner /> Estimating...</> : "Estimate meal"}
-                    </button>
-                  </div>
+      {/* Manual — expands inline */}
+      {foodMethod === "manual" && (() => {
+        const q = manualSearch.trim().toLowerCase();
+        const suggestions = q.length > 0
+          ? (() => { const canonical = FOOD_SYNONYMS[q]; return FOOD_LIBRARY.filter(f => f.name.toLowerCase().includes(q) || (canonical && f.name === canonical)).slice(0, 7); })()
+          : [];
+        function selectSuggestion(food) {
+          setManualName(food.name); setManualKcal(String(food.kcal)); setManualProt(String(food.protein));
+          setManualSearch(""); setShowSuggestions(false);
+        }
+        return (
+          <>
+            <div style={{ marginBottom: 14, position: "relative" }}>
+              <div style={{ ...S.label, marginBottom: 6 }}>Search food library</div>
+              <input style={S.input} placeholder="e.g. egg, chicken, yogurt…" value={manualSearch}
+                onChange={e => { setManualSearch(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} />
+              {showSuggestions && suggestions.length > 0 && (
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: c.bgCard, borderRadius: 10, boxShadow: "0 4px 16px rgba(100,120,200,0.12)", zIndex: 10, marginTop: 4, overflow: "hidden" }}>
+                  {suggestions.map((food, i) => (
+                    <div key={food.name} onMouseDown={() => selectSuggestion(food)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: i < suggestions.length - 1 ? `1px solid ${c.borderLight}` : "none", cursor: "pointer" }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{food.name}</div>
+                        <div style={{ fontSize: 11, color: c.textLight, marginTop: 1 }}>{food.unit}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>{food.kcal} kcal</div>
+                        <div style={{ fontSize: 10, color: c.protein }}>{food.protein}g</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              {error && <div style={{ color: c.tomato, fontSize: 12, marginTop: 8 }}>{error}</div>}
-              {preview && <PreviewResult preview={preview} grams={grams} onGramsChange={onGramsChange} onAdd={onAddPreview} S={S} c={c} />}
-            </>
-          )}
+            </div>
+            <div style={{ paddingTop: 4, borderTop: `1px solid ${c.borderLight}` }}>
+              <div style={{ marginBottom: 12, marginTop: 12 }}>
+                <div style={{ ...S.label, marginBottom: 6 }}>Meal name</div>
+                <input style={S.input} placeholder="e.g. Chicken salad" value={manualName} onChange={e => setManualName(e.target.value)} />
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ ...S.label, marginBottom: 6 }}>Calories</div>
+                  <input style={S.inputSm} type="number" placeholder="e.g. 420" value={manualKcal} onChange={e => setManualKcal(e.target.value)} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ ...S.label, marginBottom: 6 }}>Protein (g)</div>
+                  <input style={S.inputSm} type="number" placeholder="e.g. 32" value={manualProt} onChange={e => setManualProt(e.target.value)} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ ...S.label, marginBottom: 6 }}>Note <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
+                <input style={{ ...S.input, fontSize: 13 }} placeholder="e.g. homemade" value={manualNote} onChange={e => setManualNote(e.target.value)} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <button onClick={() => setManualSave(p => !p)} style={{ width: 36, height: 20, borderRadius: 99, border: "none", cursor: "pointer", background: manualSave ? c.accent : c.border, position: "relative", transition: "background 0.18s", flexShrink: 0 }}>
+                  <span style={{ position: "absolute", top: 2, left: manualSave ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.18s", display: "block" }} />
+                </button>
+                <div style={{ fontSize: 12, color: c.textMuted }}>Save for later</div>
+              </div>
+              <button style={{ ...S.btn("primary", !manualName.trim() || !manualKcal), width: "100%" }} onClick={onAddManual} disabled={!manualName.trim() || !manualKcal}>Add to today →</button>
+            </div>
+          </>
+        );
+      })()}
 
-          {/* Manual panel */}
-          {foodMethod === "manual" && (() => {
-            const q = manualSearch.trim().toLowerCase();
-            const suggestions = q.length > 0
-              ? (() => { const canonical = FOOD_SYNONYMS[q]; return FOOD_LIBRARY.filter(f => f.name.toLowerCase().includes(q) || (canonical && f.name === canonical)).slice(0, 7); })()
-              : [];
-            function selectSuggestion(food) {
-              setManualName(food.name); setManualKcal(String(food.kcal)); setManualProt(String(food.protein));
-              setManualSearch(""); setShowSuggestions(false);
-            }
-            return (
-              <>
-                <div style={{ marginBottom: 14, position: "relative" }}>
-                  <div style={{ ...S.label, marginBottom: 6 }}>Search food library</div>
-                  <input style={S.input} placeholder="e.g. egg, chicken, yogurt…" value={manualSearch}
-                    onChange={e => { setManualSearch(e.target.value); setShowSuggestions(true); }}
-                    onFocus={() => setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} />
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: c.bgCard, borderRadius: 10, boxShadow: "0 4px 16px rgba(100,120,200,0.12)", zIndex: 10, marginTop: 4, overflow: "hidden" }}>
-                      {suggestions.map((food, i) => (
-                        <div key={food.name} onMouseDown={() => selectSuggestion(food)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: i < suggestions.length - 1 ? `1px solid ${c.borderLight}` : "none", cursor: "pointer" }}>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{food.name}</div>
-                            <div style={{ fontSize: 11, color: c.textLight, marginTop: 1 }}>{food.unit}</div>
-                          </div>
-                          <div style={{ textAlign: "right", flexShrink: 0 }}>
-                            <div style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>{food.kcal} kcal</div>
-                            <div style={{ fontSize: 10, color: c.protein }}>{food.protein}g</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+      {/* Saved — secondary */}
+      {foodMethod === "saved" && (
+        <>
+          {savedFoodsCustom.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "16px 0" }}>
+              <div style={{ fontSize: 12, color: c.textLight, marginBottom: 4 }}>No saved foods yet</div>
+              <div style={{ fontSize: 11, color: c.textLight }}>Use Manual → Save for later</div>
+            </div>
+          ) : savedFoodsCustom.map((food, i) => (
+            <div key={food.name + i} style={{ display: "flex", alignItems: "center", padding: "13px 0", gap: 10, borderBottom: i < savedFoodsCustom.length - 1 ? `1px solid ${c.borderLight}` : "none" }}>
+              <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setEditingFood({ food: { ...food }, isCustom: true })}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{food.name}</div>
+                <div style={{ fontSize: 11, color: c.textLight, marginTop: 2 }}>
+                  {food.unit && <span style={{ marginRight: 4 }}>{food.unit} ·</span>}
+                  <span style={{ color: c.accent, fontWeight: 500 }}>{food.kcal} kcal</span>
+                  <span style={{ margin: "0 3px", color: c.borderLight }}>·</span>
+                  <span style={{ color: c.protein, fontWeight: 500 }}>{food.protein}g</span>
                 </div>
-                <div style={{ paddingTop: 4, borderTop: `1px solid ${c.borderLight}` }}>
-                  <div style={{ marginBottom: 12, marginTop: 12 }}>
-                    <div style={{ ...S.label, marginBottom: 6 }}>Meal name</div>
-                    <input style={S.input} placeholder="e.g. Chicken salad" value={manualName} onChange={e => setManualName(e.target.value)} />
-                  </div>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ ...S.label, marginBottom: 6 }}>Calories</div>
-                      <input style={S.inputSm} type="number" placeholder="e.g. 420" value={manualKcal} onChange={e => setManualKcal(e.target.value)} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ ...S.label, marginBottom: 6 }}>Protein (g)</div>
-                      <input style={S.inputSm} type="number" placeholder="e.g. 32" value={manualProt} onChange={e => setManualProt(e.target.value)} />
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ ...S.label, marginBottom: 6 }}>Note <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
-                    <input style={{ ...S.input, fontSize: 13 }} placeholder="e.g. homemade" value={manualNote} onChange={e => setManualNote(e.target.value)} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    <button onClick={() => setManualSave(p => !p)} style={{ width: 36, height: 20, borderRadius: 99, border: "none", cursor: "pointer", background: manualSave ? c.accent : c.border, position: "relative", transition: "background 0.18s", flexShrink: 0 }}>
-                      <span style={{ position: "absolute", top: 2, left: manualSave ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.18s", display: "block" }} />
-                    </button>
-                    <div style={{ fontSize: 12, color: c.textMuted }}>Save for later</div>
-                  </div>
-                  <button style={{ ...S.btn("primary", !manualName.trim() || !manualKcal), width: "100%" }} onClick={onAddManual} disabled={!manualName.trim() || !manualKcal}>Add to today →</button>
-                </div>
-              </>
-            );
-          })()}
-
-          {/* Saved panel */}
-          {foodMethod === "saved" && (
-            <>
-              {savedFoodsCustom.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "16px 0" }}>
-                  <div style={{ fontSize: 12, color: c.textLight, marginBottom: 4 }}>No saved foods yet</div>
-                  <div style={{ fontSize: 11, color: c.textLight }}>Use Manual → Save for later</div>
-                </div>
-              ) : savedFoodsCustom.map((food, i) => (
-                <div key={food.name + i} style={{ display: "flex", alignItems: "center", padding: "13px 0", gap: 10, borderBottom: i < savedFoodsCustom.length - 1 ? `1px solid ${c.borderLight}` : "none" }}>
-                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setEditingFood({ food: { ...food }, isCustom: true })}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{food.name}</div>
-                    <div style={{ fontSize: 11, color: c.textLight, marginTop: 2 }}>
-                      {food.unit && <span style={{ marginRight: 4 }}>{food.unit} ·</span>}
-                      <span style={{ color: c.accent, fontWeight: 500 }}>{food.kcal} kcal</span>
-                      <span style={{ margin: "0 3px", color: c.borderLight }}>·</span>
-                      <span style={{ color: c.protein, fontWeight: 500 }}>{food.protein}g</span>
-                    </div>
-                  </div>
-                  <button style={{ ...S.addBtn, width: 28, height: 28, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400, borderRadius: 8 }} onClick={() => onAddSavedFood(food)}>+</button>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Action chips row — always visible at bottom */}
-          <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
-            <button style={chip(foodMethod === "snap")}    onClick={() => setFoodMethod(foodMethod === "snap"    ? "write" : "snap")}>📷 Snap</button>
-            <button style={chip(foodMethod === "manual")}  onClick={() => setFoodMethod(foodMethod === "manual"  ? "write" : "manual")}>⌨ Manual</button>
-            <button style={chip(foodMethod === "saved")}   onClick={() => setFoodMethod(foodMethod === "saved"   ? "write" : "saved")}>☆ Saved</button>
-          </div>
-        </div>
+              </div>
+              <button style={{ ...S.addBtn, width: 28, height: 28, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400, borderRadius: 8 }} onClick={() => onAddSavedFood(food)}>+</button>
+            </div>
+          ))}
+        </>
       )}
+
+      {/* Action chips — always at bottom */}
+      <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
+        <button style={chip(foodMethod === "snap")}   onClick={() => setFoodMethod(foodMethod === "snap"   ? "write" : "snap")}>📷 Snap</button>
+        <button style={chip(foodMethod === "manual")} onClick={() => setFoodMethod(foodMethod === "manual" ? "write" : "manual")}>⌨ Manual</button>
+        <button style={chip(foodMethod === "saved")}  onClick={() => setFoodMethod(foodMethod === "saved"  ? "write" : "saved")}>☆ Saved</button>
+      </div>
     </div>
   );
 }
